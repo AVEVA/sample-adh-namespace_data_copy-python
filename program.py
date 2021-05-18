@@ -4,11 +4,42 @@ import configparser
 import json
 
 # Settings
-stream_query = f'SLTCSensorUnit1'
-prefix = 'SaaS:'  # Customer prefix for streamId
+stream_query = f'"SLTCSensorUnit1"'
+asset_query = f'"SLTC AC Unit 1"'
+data_view_query = f''
+prefix = ''  # Customer prefix for streamId
 max_stream_count = 150  # The maximum number of streams to copy
+max_asset_count = 150  # The maximum number of assets to copy
+max_data_view_count = 150  # The maximum number of streams to copy
 start_time = '2021-05-16'  # Time window of values to transfer
-end_time = '2021-05-17'
+end_time = '2021-05-18'
+
+
+def copyStream(stream, current_sds_source, new_sds_source, start_time, end_time, prefix=''):
+    # Ensure type exists in new namespace
+    new_type = current_sds_source.Types.getType(
+        namespace_id=current_namespace_id, type_id=stream.TypeId)
+    new_type.Id = f"{prefix}{stream.TypeId}"  # optional
+    new_sds_source.Types.getOrCreateType(
+        namespace_id=new_namespace_id, type=new_type)
+
+    # Create the new stream
+    current_stream_id = stream.Id
+    stream.Id = f"{prefix}{stream.Id}"  # optional
+    stream.TypeId = new_type.Id
+    new_sds_source.Streams.getOrCreateStream(
+        namespace_id=new_namespace_id, stream=stream)
+
+    # Copy the values from the current stream to the new stream
+    data = SdsResultPage()
+    while not data.end():
+        data = current_sds_source.Streams.getWindowValuesPaged(
+            namespace_id=current_namespace_id, stream_id=current_stream_id, value_class=None,
+            start=start_time, end=end_time, count=250000, continuation_token=data.ContinuationToken)
+        if len(data.Results) > 0:
+            new_sds_source.Streams.updateValues(
+                namespace_id=new_namespace_id, stream_id=stream.Id, values=json.dumps(data.Results))
+
 
 # Configuration
 config = configparser.ConfigParser()
@@ -37,26 +68,34 @@ streams = current_sds_source.Streams.getStreams(
 # For each stream found, copy over the type, create the new stream, and copy the values
 for stream in streams:
 
+    copyStream(stream, current_sds_source,
+               new_sds_source, start_time, end_time)
+
+# Find all assets via a query (repeat script is multiple searches are necessary)
+assets = current_sds_source.Assets.getAssets(
+    namespace_id=current_namespace_id, query=asset_query, skip=0, count=max_asset_count)
+
+# For each asset found, copy the referenced streams, copy the values, copy over the type, and create the new asset
+for asset in assets:
+
+    # Copy over referenced streams
+    for stream_reference in asset.StreamReferences:
+        stream = current_sds_source.Streams.getStream(
+            namespace_id=current_namespace_id, stream_id=stream_reference.StreamId)
+        copyStream(stream, current_sds_source,
+               new_sds_source, start_time, end_time)
+
     # Ensure type exists in new namespace
-    new_type = current_sds_source.Types.getType(
-        namespace_id=current_namespace_id, type_id=stream.TypeId)
-    new_type.Id = f"{prefix}{stream.TypeId}"  # optional
-    new_sds_source.Types.getOrCreateType(
-        namespace_id=new_namespace_id, type=new_type)
+    if asset.AssetTypeId != None:
+        new_asset_type = current_sds_source.Assets.getAssetTypeById(
+            namespace_id=current_sds_source, asset_type_id=asset.AssetTypeId)
+        new_asset_type.Id = f"{prefix}{asset.AssetTypeId}"
+        new_sds_source.Assets.createOrUpdateAssetType(
+            namespace_id=new_sds_source, asset_type=new_asset_type)
 
-    # Create the new stream
-    current_stream_id = stream.Id
-    stream.Id = f"{prefix}{stream.Id}"  # optional
-    stream.TypeId = new_type.Id
-    new_sds_source.Streams.getOrCreateStream(
-        namespace_id=new_namespace_id, stream=stream)
-
-    # Copy the values from the current stream to the new stream
-    data = SdsResultPage()
-    while not data.end():
-        data = current_sds_source.Streams.getWindowValues(
-            namespace_id=current_namespace_id, stream_id=current_stream_id, value_class=None, 
-            start=start_time, end=end_time, count=1000, continuation_token=data.ContinuationToken)
-        if len(data.Results) > 0:
-            new_sds_source.Streams.updateValues(
-                namespace_id=new_namespace_id, stream_id=stream.Id, values=json.dumps(data.Results))
+    # Create the new asset
+    new_asset = current_sds_source.Assets.getAssetById(
+        namespace_id=current_namespace_id, asset_id=asset.Id)
+    new_asset.Id = f"{prefix}{asset.Id}"
+    new_sds_source.Assets.createOrUpdateAsset(
+        namespace_id=new_namespace_id, asset=new_asset)
