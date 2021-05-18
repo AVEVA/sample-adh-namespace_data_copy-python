@@ -1,4 +1,4 @@
-from ocs_sample_library_preview.SDS.SdsContinuationToken import SdsContinuationToken
+from ocs_sample_library_preview.SDS.SdsResultPage import SdsResultPage
 from ocs_sample_library_preview import OCSClient
 import configparser
 import json
@@ -7,7 +7,7 @@ import json
 stream_query = f'SLTCSensorUnit1'
 prefix = 'SaaS:'  # Customer prefix for streamId
 max_stream_count = 150  # The maximum number of streams to copy
-start_time = '2021-05-14'  # Time window of values to transfer
+start_time = '2021-05-16'  # Time window of values to transfer
 end_time = '2021-05-17'
 
 # Configuration
@@ -52,11 +52,11 @@ for stream in streams:
         namespace_id=new_namespace_id, stream=stream)
 
     # Copy the values from the current stream to the new stream
-    continuation_token = SdsContinuationToken()
-    while continuation_token.continuing():
+    data = SdsResultPage()
+    while not data.end():
         data = current_sds_source.Streams.getWindowValues(
             namespace_id=current_namespace_id, stream_id=current_stream_id, value_class=None, 
-            start=start_time, end=end_time, count=1000, continuation_token=continuation_token)
-        if len(data) > 0:
+            start=start_time, end=end_time, count=1000, continuation_token=data.ContinuationToken)
+        if len(data.Results) > 0:
             new_sds_source.Streams.updateValues(
-                namespace_id=new_namespace_id, stream_id=stream.Id, values=json.dumps(data))
+                namespace_id=new_namespace_id, stream_id=stream.Id, values=json.dumps(data.Results))
