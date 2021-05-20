@@ -4,19 +4,19 @@ from ocs_sample_library_preview import OCSClient
 from concurrent.futures import ThreadPoolExecutor
 import configparser
 import json
-import os
 
 # Settings
 stream_query = 'SLTC.101001*'  # f'"SLTCSensorUnit1"'
 asset_query = f'"SLTC AC Unit "*'
-data_view_id = f'ABC:TankView'  # f'SLTC Sensor Unit'
+data_view_id = f'SLTC Sensor Unit'
 prefix = ''  # Customer prefix for streamId
 max_stream_count = 150  # The maximum number of streams to copy
 max_asset_count = 150  # The maximum number of assets to copy
 max_data_view_count = 150  # The maximum number of streams to copy
 start_time = '2021-05-16'  # Time window of values to transfer
 end_time = '2021-05-18'
-max_workers = min(32, os.cpu_count() + 4)  # The maximum number of threads
+stream_set = set([])  # The set of streams to be sent
+asset_set = set([])  # The set of assets to be sent
 
 
 def copyStream(stream, current_sds_source, new_sds_source, start_time, end_time, prefix=''):
@@ -52,14 +52,13 @@ def copyStream(stream, current_sds_source, new_sds_source, start_time, end_time,
 
 
 def copyAsset(asset, current_sds_source, new_sds_source, start_time, end_time, prefix=''):
+    global stream_set
 
     # Copy over referenced streams
-    with ThreadPoolExecutor(max_workers=int(3*max_workers/4)) as pool:
-        for stream_reference in asset.StreamReferences:
-            stream = current_sds_source.Streams.getStream(
-                namespace_id=current_namespace_id, stream_id=stream_reference.StreamId)
-            pool.submit(copyStream, stream, current_sds_source,
-                        new_sds_source, start_time, end_time)
+    for stream_reference in asset.StreamReferences:
+        stream = current_sds_source.Streams.getStream(
+            namespace_id=current_namespace_id, stream_id=stream_reference.StreamId)
+        stream_set.add(stream)
 
     # Ensure type exists in new namespace
     if asset.AssetTypeId != None:
@@ -97,33 +96,7 @@ current_namespace_id = config.get('CurrentConfiguration', 'NamespaceId')
 new_namespace_id = config.get('NewConfiguration', 'NamespaceId')
 
 
-# Step 1: Copy streams
-
-# Find all streams via a query (repeat script is multiple searches are necessary)
-streams = current_sds_source.Streams.getStreams(
-    namespace_id=current_namespace_id, query=stream_query, skip=0, count=max_stream_count)
-
-# For each stream found, copy over the type, create the new stream, and copy the values
-with ThreadPoolExecutor() as pool:
-    for stream in streams:
-        pool.submit(copyStream, stream, current_sds_source,
-                    new_sds_source, start_time, end_time)
-
-
-# Step 2: Copy assets
-
-# Find all assets via a query (repeat script is multiple searches are necessary)
-assets = current_sds_source.Assets.getAssets(
-    namespace_id=current_namespace_id, query=asset_query, skip=0, count=max_asset_count)
-
-# For each asset found, copy the referenced streams, copy the values, copy over the type, and create the new asset
-with ThreadPoolExecutor(max_workers=int(max_workers/4)) as pool:
-    for asset in assets:
-        pool.submit(copyAsset, asset, current_sds_source,
-                    new_sds_source, start_time, end_time)
-
-
-# Step 3: Copy data view
+# Step 1: Copy data view
 
 # Find the data view with the specified Id
 current_sds_source
@@ -136,18 +109,12 @@ for query in data_view.Queries:
     if query.Kind == DataItemResourceType.Stream:
         streams = current_sds_source.Streams.getStreams(
             namespace_id=current_namespace_id, query=stream_query, skip=0, count=max_stream_count)
-        with ThreadPoolExecutor() as pool:
-            for stream in streams:
-                pool.submit(copyStream, stream, current_sds_source,
-                            new_sds_source, start_time, end_time)
+        stream_set = stream_set.union(streams)
 
     elif query.Kind == DataItemResourceType.Assets:
         assets = current_sds_source.Assets.getAssets(
             namespace_id=current_namespace_id, query=query.Value, skip=0, count=max_asset_count)
-        with ThreadPoolExecutor(max_workers=int(max_workers/4)) as pool:
-            for asset in assets:
-                pool.submit(copyAsset, asset, current_sds_source,
-                            new_sds_source, start_time, end_time)
+        asset_set.union(assets)
 
     else:
         raise ValueError
@@ -155,3 +122,29 @@ for query in data_view.Queries:
 # Create the data view
 new_sds_source.DataViews.putDataView(
     namespace_id=new_namespace_id, data_view=data_view)
+
+
+# Step 2: Copy assets
+
+# Find all assets via a query (repeat script is multiple searches are necessary)
+asset_set = asset_set.union(current_sds_source.Assets.getAssets(
+    namespace_id=current_namespace_id, query=asset_query, skip=0, count=max_asset_count))
+
+# For each asset found, copy the referenced streams, copy the values, copy over the type, and create the new asset
+with ThreadPoolExecutor() as pool:
+    for asset in asset_set:
+        pool.submit(copyAsset, asset, current_sds_source,
+                    new_sds_source, start_time, end_time)
+
+
+# Step 3: Copy streams
+
+# Find all streams via a query (repeat script is multiple searches are necessary)
+stream_set = stream_set.union(current_sds_source.Streams.getStreams(
+    namespace_id=current_namespace_id, query=stream_query, skip=0, count=max_stream_count))
+
+# For each stream found, copy over the type, create the new stream, and copy the values
+with ThreadPoolExecutor() as pool:
+    for stream in stream_set:
+        pool.submit(copyStream, stream, current_sds_source,
+                    new_sds_source, start_time, end_time)
