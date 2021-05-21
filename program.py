@@ -2,6 +2,7 @@ from ocs_sample_library_preview.DataView.DataItemResourceType import DataItemRes
 from ocs_sample_library_preview.SDS.SdsResultPage import SdsResultPage
 from ocs_sample_library_preview import OCSClient
 from concurrent.futures import ThreadPoolExecutor
+import threading
 import configparser
 import json
 
@@ -15,8 +16,9 @@ max_asset_count = 150  # The maximum number of assets to copy
 max_data_view_count = 150  # The maximum number of streams to copy
 start_time = '2021-05-16'  # Time window of values to transfer
 end_time = '2021-05-18'
-stream_set = set([])  # The set of streams to be sent
-asset_set = set([])  # The set of assets to be sent
+stream_set = set()  # The set of streams to be sent
+asset_set = set()  # The set of assets to be sent
+set_lock = threading.Lock()
 
 
 def copyStream(stream, current_sds_source, new_sds_source, start_time, end_time, prefix=''):
@@ -58,7 +60,8 @@ def copyAsset(asset, current_sds_source, new_sds_source, start_time, end_time, p
     for stream_reference in asset.StreamReferences:
         stream = current_sds_source.Streams.getStream(
             namespace_id=current_namespace_id, stream_id=stream_reference.StreamId)
-        stream_set.add(stream)
+        with set_lock:
+            stream_set.add(stream)
 
     # Ensure type exists in new namespace
     if asset.AssetTypeId != None:
