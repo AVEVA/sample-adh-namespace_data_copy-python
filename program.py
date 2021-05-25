@@ -19,6 +19,8 @@ max_data_view_count = 150  # The maximum number of streams to copy
 start_time = '2021-05-01'  # Time window of values to transfer
 end_time = '2021-05-02'
 request_timeout = 30  # The request timeout limit
+
+# Global Variables
 stream_set = set()  # The set of streams to be sent
 asset_set = set()  # The set of assets to be sent
 set_lock = threading.Lock()
