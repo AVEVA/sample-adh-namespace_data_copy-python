@@ -14,11 +14,12 @@ Developed against Python 3.9.1.
 
 ## About this sample
 
-This sample uses REST API calls to copy dataviews, assets, and streams from a source namespace to a destination namespace.
+This sample uses REST API calls to copy dataviews, assets, and streams from a source namespace to a destination namespace. The steps are as follows
 
 1. Copy the dataview specified by its Id and add all referenced assets and streams to sets to be copied later
 1. Copy all assets found by the specified query and referenced by the previously found dataview. Also add all referenced streams to a set to be copied later
 1. Copy all streams found by the specified query and referenced by the previously found assets and dataview
+1. If testing, cleanup all created dataviews, assets, and streams
 
 ## Configuring the sample
 
