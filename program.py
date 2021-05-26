@@ -96,19 +96,21 @@ def main(test=False):
     config = configparser.ConfigParser()
     config.read('config.ini')
 
-    source_sds_source = OCSClient(config.get('Access', 'ApiVersion'),
+    source_sds_source = OCSClient(config.get('SourceConfiguration', 'ApiVersion'),
                                   config.get(
                                       'SourceConfiguration', 'TenantId'),
-                                  config.get('Access', 'Resource'),
+                                  config.get(
+                                      'SourceConfiguration', 'Resource'),
                                   config.get(
                                       'SourceConfiguration', 'ClientId'),
                                   config.get('SourceConfiguration', 'ClientSecret'))
     source_sds_source.request_timeout = request_timeout
 
-    destination_sds_source = OCSClient(config.get('Access', 'ApiVersion'),
+    destination_sds_source = OCSClient(config.get('DestinationConfiguration', 'ApiVersion'),
                                        config.get(
                                            'DestinationConfiguration', 'TenantId'),
-                                       config.get('Access', 'Resource'),
+                                       config.get(
+                                           'DestinationConfiguration', 'Resource'),
                                        config.get(
                                            'DestinationConfiguration', 'ClientId'),
                                        config.get('DestinationConfiguration', 'ClientSecret'))
