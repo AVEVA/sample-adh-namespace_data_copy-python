@@ -1,32 +1,12 @@
-from ocs_sample_library_preview.DataView.DataItemResourceType import DataItemResourceType
-from ocs_sample_library_preview.SDS.SdsResultPage import SdsResultPage
-from ocs_sample_library_preview import OCSClient
+from ocs_sample_library_preview import DataItemResourceType, SdsResultPage, OCSClient
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import traceback
 import configparser
 import json
 
-# Settings
-stream_query = f'"SLTCSensorUnit1"'
-asset_query = f'"SLTC Sensor1"'
-data_view_id = f'SLTC Sensor Unit'
-prefix = ''  # prefix for streams, assets, etc.
-test_prefix = 'SAMPLE_TEST:'  # prefix for testing
-max_stream_count = 150  # The maximum number of streams to copy
-max_asset_count = 150  # The maximum number of assets to copy
-max_data_view_count = 150  # The maximum number of streams to copy
-start_time = '2021-05-01'  # Time window of values to transfer
-end_time = '2021-05-02'
-request_timeout = 30  # The request timeout limit
 
-# Global Variables
-stream_set = set()  # The set of streams to be sent
-asset_set = set()  # The set of assets to be sent
-set_lock = threading.Lock()
-
-
-def copyStream(stream, source_sds_source, destination_sds_source, start_time, end_time, prefix=''):
+def copyStream(stream, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, start_time, end_time, prefix=''):
 
     # Ensure type exists in new namespace
     destination_type = source_sds_source.Types.getType(
@@ -59,21 +39,19 @@ def copyStream(stream, source_sds_source, destination_sds_source, start_time, en
                 namespace_id=destination_namespace_id, stream_id=stream.Id, values=json.dumps(data.Results))
 
 
-def copyAsset(asset, source_sds_source, destination_sds_source, start_time, end_time, prefix=''):
-    global stream_set
-
-    # Copy over referenced streams
-    for stream_reference in asset.StreamReferences:
-        stream = source_sds_source.Streams.getStream(
-            namespace_id=source_namespace_id, stream_id=stream_reference.StreamId)
-        with set_lock:
-            stream_set.add(stream)
+def copyAsset(asset, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, prefix=''):
 
     # Ensure type exists in new namespace
     if asset.AssetTypeId != None:
         destination_asset_type = source_sds_source.Assets.getAssetTypeById(
             namespace_id=source_namespace_id, asset_type_id=asset.AssetTypeId)
-        destination_asset_type.Id = f'{prefix}{asset.AssetTypeId}'
+        
+        destination_asset_type.Id = f'{prefix}{asset.AssetTypeId}'  # optional
+
+        for type_reference in destination_asset_type.TypeReferences:
+            # optional
+            type_reference.TypeId = f'{prefix}{type_reference.TypeId}'
+
         destination_sds_source.Assets.createOrUpdateAssetType(
             namespace_id=destination_namespace_id, asset_type=destination_asset_type)
         asset.AssetTypeId = destination_asset_type.Id
@@ -85,9 +63,22 @@ def copyAsset(asset, source_sds_source, destination_sds_source, start_time, end_
 
 
 def main(test=False):
-    global source_sds_source, destination_sds_source, source_namespace_id, destination_namespace_id, \
-        stream_query, asset_query, data_view_id, prefix, max_stream_count, max_asset_count, \
-        max_data_view_count, start_time, end_time, stream_set, asset_set, set_lock
+    global streams, assets
+
+    # Settings
+    stream_query = '"SLTCSensorUnit1"'
+    asset_query = '"SLTC Sensor1"'
+    data_view_id = 'SLTC Sensor Unit'
+    prefix = ''  # prefix for streams, assets, etc.
+    test_prefix = 'SAMPLE_TEST:'  # prefix for testing
+    max_stream_count = 150  # The maximum number of streams to copy
+    max_asset_count = 150  # The maximum number of assets to copy
+    max_data_view_count = 150  # The maximum number of streams to copy
+    start_time = '2021-05-01'  # Time window of values to transfer
+    end_time = '2021-05-02'
+    request_timeout = 30  # The request timeout limit
+    streams = []  # The list of streams to be sent
+    assets = []  # The list of assets to be sent
 
     if test:
         prefix = test_prefix
@@ -133,14 +124,14 @@ def main(test=False):
             for query in data_view.Queries:
 
                 if query.Kind == DataItemResourceType.Stream:
-                    streams = source_sds_source.Streams.getStreams(
-                        namespace_id=source_namespace_id, query=stream_query, skip=0, count=max_stream_count)
-                    stream_set = stream_set.union(streams)
+                    new_streams = source_sds_source.Streams.getStreams(
+                        namespace_id=source_namespace_id, query=query.Value, skip=0, count=max_stream_count)
+                    streams = streams + new_streams
 
                 elif query.Kind == DataItemResourceType.Assets:
-                    assets = source_sds_source.Assets.getAssets(
+                    new_assets = source_sds_source.Assets.getAssets(
                         namespace_id=source_namespace_id, query=query.Value, skip=0, count=max_asset_count)
-                    asset_set.union(assets)
+                    assets = assets + new_assets
 
                 else:
                     raise ValueError
@@ -150,38 +141,41 @@ def main(test=False):
             destination_sds_source.DataViews.putDataView(
                 namespace_id=destination_namespace_id, data_view=data_view)
 
-        # Step 2: Copy assets
+        # Step 2: Retrieve streams referenced in assets
 
         if asset_query != None:
             # Find all assets via a query (repeat script is multiple searches are necessary)
-            asset_set = asset_set.union(source_sds_source.Assets.getAssets(
-                namespace_id=source_namespace_id, query=asset_query, skip=0, count=max_asset_count))
+            assets = assets + source_sds_source.Assets.getAssets(
+                namespace_id=source_namespace_id, query=asset_query, skip=0, count=max_asset_count)
 
         # Remove duplicate assets
         asset_id_set = set()
         reduced_asset_set = set()
-        for asset in asset_set:
+        for asset in assets:
             if asset.Id not in asset_id_set:
                 reduced_asset_set.add(asset)
                 asset_id_set.add(asset.Id)
 
-        # For each asset found, copy the referenced streams, copy the values, copy over the type, and create the new asset
-        with ThreadPoolExecutor() as pool:
-            for asset in reduced_asset_set:
-                pool.submit(copyAsset, asset, source_sds_source,
-                            destination_sds_source, start_time, end_time, prefix)
+        # Copy over referenced streams
+        for asset in assets:
+            for stream_reference in asset.StreamReferences:
+                stream = source_sds_source.Streams.getStream(
+                    namespace_id=source_namespace_id, stream_id=stream_reference.StreamId)
+                # optional
+                stream_reference.StreamId = f'{prefix}{stream_reference.StreamId}'
+                streams.append(stream)
 
         # Step 3: Copy streams
 
         if stream_query != None:
             # Find all streams via a query (repeat script is multiple searches are necessary)
-            stream_set = stream_set.union(source_sds_source.Streams.getStreams(
-                namespace_id=source_namespace_id, query=stream_query, skip=0, count=max_stream_count))
+            streams = streams + source_sds_source.Streams.getStreams(
+                namespace_id=source_namespace_id, query=stream_query, skip=0, count=max_stream_count)
 
         # Remove duplicate streams
         stream_id_set = set()
         reduced_stream_set = set()
-        for stream in stream_set:
+        for stream in streams:
             if stream.Id not in stream_id_set:
                 reduced_stream_set.add(stream)
                 stream_id_set.add(stream.Id)
@@ -189,8 +183,16 @@ def main(test=False):
         # For each stream found, copy over the type, create the new stream, and copy the values
         with ThreadPoolExecutor() as pool:
             for stream in reduced_stream_set:
-                pool.submit(copyStream, stream, source_sds_source,
-                            destination_sds_source, start_time, end_time, prefix)
+                pool.submit(copyStream, stream, source_sds_source, source_namespace_id,
+                            destination_sds_source, destination_namespace_id, start_time, end_time, prefix)
+
+        # Step 4: Copy assets
+
+        with ThreadPoolExecutor() as pool:
+            for asset in reduced_asset_set:
+                pool.submit(copyAsset, asset, source_sds_source, source_namespace_id,
+                            destination_sds_source, destination_namespace_id, prefix)
+
     except Exception as ex:
         print((f"Encountered Error: {ex}"))
         print
