@@ -56,6 +56,8 @@ python program.py
 
 ## Running the automated test
 
+**Note: The test will delete the Data View, Assets, and Streams that were created.**  
+
 To test the sample, run
 
 ```shell

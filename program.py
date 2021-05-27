@@ -70,10 +70,9 @@ def main(test=False):
     asset_query = '"SLTC Sensor1"'
     data_view_id = 'SLTC Sensor Unit'
     prefix = ''  # prefix for streams, assets, etc.
-    test_prefix = 'SAMPLE_TEST:'  # DO NOT MODIFY! prefix for testing
+    test_prefix = 'SAMPLE_TEST:'  # prefix for testing
     max_stream_count = 150  # The maximum number of streams to copy
     max_asset_count = 150  # The maximum number of assets to copy
-    max_data_view_count = 150  # The maximum number of streams to copy
     start_time = '2021-05-01'  # Time window of values to transfer
     end_time = '2021-05-02'
     request_timeout = 30  # The request timeout limit
@@ -200,51 +199,6 @@ def main(test=False):
         print
         success = False
         exception = ex
-    finally:
-        if (test):
-            # Step 5: Cleanup
-
-            query = f'"{test_prefix[:-1]}"*'
-
-            # Find all data views that have the test prefix and delete them
-            data_views = destination_sds_source.DataViews.getDataViews(
-                namespace_id=destination_namespace_id)
-            for data_view in data_views:
-                if data_view.Id.startswith(test_prefix):
-                    destination_sds_source.DataViews.deleteDataView(
-                        namespace_id=destination_namespace_id, data_view_id=data_view.Id)
-
-            # Find all assets that have the test prefix and delete them
-            assets = destination_sds_source.Assets.getAssets(
-                namespace_id=destination_namespace_id, query=query, skip=0, count=max_asset_count)
-            with ThreadPoolExecutor() as pool:
-                for asset in assets:
-                    pool.submit(destination_sds_source.Assets.deleteAsset,
-                                namespace_id=destination_namespace_id, asset_id=asset.Id)
-
-            # Find all asset types that have the test prefix and delete them
-            asset_type_ids = set()
-            for asset in assets:
-                asset_type_ids.add(asset.AssetTypeId)
-            for asset_type_id in asset_type_ids:
-                destination_sds_source.Assets.deleteAssetType(
-                    namespace_id=destination_namespace_id, asset_type_id=asset_type_id)
-
-            # Find all streams that have the test prefix and delete them
-            streams = destination_sds_source.Streams.getStreams(
-                namespace_id=destination_namespace_id, query=query, skip=0, count=max_stream_count)
-            with ThreadPoolExecutor() as pool:
-                for stream in streams:
-                    pool.submit(destination_sds_source.Streams.deleteStream,
-                                namespace_id=destination_namespace_id, stream_id=stream.Id)
-
-            # Find all types associated with the created streams and delete them
-            type_ids = set()
-            for stream in streams:
-                type_ids.add(stream.TypeId)
-            for type_id in type_ids:
-                destination_sds_source.Types.deleteType(
-                    namespace_id=destination_namespace_id, type_id=type_id)
 
 
 if __name__ == '__main__':
