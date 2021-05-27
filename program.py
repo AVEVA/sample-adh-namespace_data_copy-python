@@ -202,7 +202,7 @@ def main(test=False):
         exception = ex
     finally:
         if (test):
-            # Step 4: Cleanup
+            # Step 5: Cleanup
 
             query = f'"{test_prefix[:-1]}"*'
 
