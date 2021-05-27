@@ -45,7 +45,7 @@ def copyAsset(asset, source_sds_source, source_namespace_id, destination_sds_sou
     if asset.AssetTypeId != None:
         destination_asset_type = source_sds_source.Assets.getAssetTypeById(
             namespace_id=source_namespace_id, asset_type_id=asset.AssetTypeId)
-        
+
         destination_asset_type.Id = f'{prefix}{asset.AssetTypeId}'  # optional
 
         for type_reference in destination_asset_type.TypeReferences:
@@ -70,7 +70,7 @@ def main(test=False):
     asset_query = '"SLTC Sensor1"'
     data_view_id = 'SLTC Sensor Unit'
     prefix = ''  # prefix for streams, assets, etc.
-    test_prefix = 'SAMPLE_TEST:'  # prefix for testing
+    test_prefix = 'SAMPLE_TEST:'  # DO NOT MODIFY! prefix for testing
     max_stream_count = 150  # The maximum number of streams to copy
     max_asset_count = 150  # The maximum number of assets to copy
     max_data_view_count = 150  # The maximum number of streams to copy
