@@ -5,6 +5,8 @@ from ocs_sample_library_preview import DataItemResourceType, SdsResultPage, OCSC
 from concurrent.futures import ThreadPoolExecutor
 from program import main
 
+from config import test_prefix, test_prefix, max_stream_count, max_asset_count, destination_sds_source, destination_namespace_id
+
 
 class SDSPythonSampleTests(unittest.TestCase):
     @classmethod
@@ -18,38 +20,17 @@ class SDSPythonSampleTests(unittest.TestCase):
 def cleanup():
 
     # Settings
-    test_prefix = 'SAMPLE_TEST:'  # prefix for testing
     stream_query = f'"{test_prefix}SLTCSensorUnit1"'
     asset_query = f'Name:"SLTC Sensor1" AND AssetTypeId:"{test_prefix}"*'
     data_view_id = f'{test_prefix}SLTC Sensor Unit'
-    max_stream_count = 150  # The maximum number of streams to retrieve
-    max_asset_count = 150  # The maximum number of assets to retrieve
-    request_timeout = 30  # The request timeout limit
 
-    # Read configuration
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-
-    destination_sds_source = OCSClient(config.get('DestinationConfiguration', 'ApiVersion'),
-                                       config.get(
-                                           'DestinationConfiguration', 'TenantId'),
-                                       config.get(
-                                           'DestinationConfiguration', 'Resource'),
-                                       config.get(
-                                           'DestinationConfiguration', 'ClientId'),
-                                       config.get('DestinationConfiguration', 'ClientSecret'))
-    destination_sds_source.request_timeout = request_timeout
-
-    destination_namespace_id = config.get(
-        'DestinationConfiguration', 'NamespaceId')
-
-    # Find all data views that have the test prefix and delete them
-    data_views = destination_sds_source.DataViews.getDataViews(
-        namespace_id=destination_namespace_id)
-    for data_view in data_views:
-        if data_view.Id == data_view_id:
-            destination_sds_source.DataViews.deleteDataView(
-                namespace_id=destination_namespace_id, data_view_id=data_view.Id)
+    # Find the data view with the specified id and delete it
+    try:
+        destination_sds_source.DataViews.deleteDataView(
+            namespace_id=destination_namespace_id, data_view_id=data_view_id)
+    except Exception as ex:
+        print((f"Encountered Error: {ex}"))
+        print
 
     # Find all assets that have the test prefix and delete them
     assets = destination_sds_source.Assets.getAssets(
@@ -61,10 +42,19 @@ def cleanup():
             pool.submit(destination_sds_source.Assets.deleteAsset,
                         namespace_id=destination_namespace_id, asset_id=asset.Id)
 
-    # Find all asset types that have the test prefix and delete them
+    # Delete all asset types used by created assets
     for asset_type_id in asset_type_ids:
-        destination_sds_source.Assets.deleteAssetType(
-            namespace_id=destination_namespace_id, asset_type_id=asset_type_id)
+        # Check that the type id is not still in use
+        assets = destination_sds_source.Assets.getAssets(
+            namespace_id=destination_namespace_id, query=f'AssetTypeId:"{asset_type_id}"')
+
+        if len(assets) > 0:
+            print(
+                f'Asset type use {asset_type_id} still in use! It will be skipped.')
+        else:
+            # Delete type
+            destination_sds_source.Assets.deleteAssetType(
+                namespace_id=destination_namespace_id, asset_type_id=asset_type_id)
 
     # Find all streams that have the test prefix and delete them
     streams = destination_sds_source.Streams.getStreams(
@@ -78,8 +68,12 @@ def cleanup():
 
     # Find all types associated with the created streams and delete them
     for type_id in type_ids:
-        destination_sds_source.Types.deleteType(
-            namespace_id=destination_namespace_id, type_id=type_id)
+        try:
+            destination_sds_source.Types.deleteType(
+                namespace_id=destination_namespace_id, type_id=type_id)
+        except Exception as ex:
+            print((f"Encountered Error: {ex}"))
+            print
 
 
 if __name__ == '__main__':

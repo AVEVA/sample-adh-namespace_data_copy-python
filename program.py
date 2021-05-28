@@ -5,6 +5,10 @@ import traceback
 import configparser
 import json
 
+from config import stream_query, asset_query, data_view_id, test_prefix, test_prefix, \
+    max_stream_count, max_asset_count, start_time, end_time, source_sds_source, \
+    destination_sds_source, source_namespace_id, destination_namespace_id
+
 
 def copyStream(stream, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, start_time, end_time, prefix=''):
 
@@ -65,57 +69,17 @@ def copyAsset(asset, source_sds_source, source_namespace_id, destination_sds_sou
 def main(test=False):
     global streams, assets
 
-    # Settings
-    stream_query = '"SLTCSensorUnit1"'
-    asset_query = '"SLTC Sensor1"'
-    data_view_id = 'SLTC Sensor Unit'
-    prefix = ''  # prefix for streams, assets, etc.
-    test_prefix = 'SAMPLE_TEST:'  # prefix for testing
-    max_stream_count = 150  # The maximum number of streams to copy
-    max_asset_count = 150  # The maximum number of assets to copy
-    start_time = '2021-05-01'  # Time window of values to transfer
-    end_time = '2021-05-02'
-    request_timeout = 30  # The request timeout limit
     streams = []  # The list of streams to be sent
     assets = []  # The list of assets to be sent
 
     if test:
         prefix = test_prefix
 
-    # Read configuration
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-
-    source_sds_source = OCSClient(config.get('SourceConfiguration', 'ApiVersion'),
-                                  config.get(
-                                      'SourceConfiguration', 'TenantId'),
-                                  config.get(
-                                      'SourceConfiguration', 'Resource'),
-                                  config.get(
-                                      'SourceConfiguration', 'ClientId'),
-                                  config.get('SourceConfiguration', 'ClientSecret'))
-    source_sds_source.request_timeout = request_timeout
-
-    destination_sds_source = OCSClient(config.get('DestinationConfiguration', 'ApiVersion'),
-                                       config.get(
-                                           'DestinationConfiguration', 'TenantId'),
-                                       config.get(
-                                           'DestinationConfiguration', 'Resource'),
-                                       config.get(
-                                           'DestinationConfiguration', 'ClientId'),
-                                       config.get('DestinationConfiguration', 'ClientSecret'))
-    destination_sds_source.request_timeout = request_timeout
-
-    source_namespace_id = config.get('SourceConfiguration', 'NamespaceId')
-    destination_namespace_id = config.get(
-        'DestinationConfiguration', 'NamespaceId')
-
     try:
         # Step 1: Copy data view
 
         if data_view_id != None:
             # Find the data view with the specified Id
-            source_sds_source
             data_view = source_sds_source.DataViews.getDataView(
                 namespace_id=source_namespace_id, data_view_id=data_view_id)
 
@@ -143,16 +107,16 @@ def main(test=False):
         # Step 2: Retrieve streams referenced in assets
 
         if asset_query != None:
-            # Find all assets via a query (repeat script is multiple searches are necessary)
+            # Find all assets via a query (repeat script if multiple searches are necessary)
             assets = assets + source_sds_source.Assets.getAssets(
                 namespace_id=source_namespace_id, query=asset_query, skip=0, count=max_asset_count)
 
         # Remove duplicate assets
         asset_id_set = set()
-        reduced_asset_set = set()
+        reduced_assets = []
         for asset in assets:
             if asset.Id not in asset_id_set:
-                reduced_asset_set.add(asset)
+                reduced_assets.append(asset)
                 asset_id_set.add(asset.Id)
 
         # Copy over referenced streams
@@ -167,28 +131,28 @@ def main(test=False):
         # Step 3: Copy streams
 
         if stream_query != None:
-            # Find all streams via a query (repeat script is multiple searches are necessary)
+            # Find all streams via a query (repeat script if multiple searches are necessary)
             streams = streams + source_sds_source.Streams.getStreams(
                 namespace_id=source_namespace_id, query=stream_query, skip=0, count=max_stream_count)
 
         # Remove duplicate streams
         stream_id_set = set()
-        reduced_stream_set = set()
+        reduced_streams = []
         for stream in streams:
             if stream.Id not in stream_id_set:
-                reduced_stream_set.add(stream)
+                reduced_streams.append(stream)
                 stream_id_set.add(stream.Id)
 
         # For each stream found, copy over the type, create the new stream, and copy the values
         with ThreadPoolExecutor() as pool:
-            for stream in reduced_stream_set:
+            for stream in reduced_streams:
                 pool.submit(copyStream, stream, source_sds_source, source_namespace_id,
                             destination_sds_source, destination_namespace_id, start_time, end_time, prefix)
 
         # Step 4: Copy assets
 
         with ThreadPoolExecutor() as pool:
-            for asset in reduced_asset_set:
+            for asset in reduced_assets:
                 pool.submit(copyAsset, asset, source_sds_source, source_namespace_id,
                             destination_sds_source, destination_namespace_id, prefix)
 
@@ -197,8 +161,6 @@ def main(test=False):
         print
         traceback.print_exc()
         print
-        success = False
-        exception = ex
 
 
 if __name__ == '__main__':
