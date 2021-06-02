@@ -10,19 +10,22 @@ from config import stream_query, asset_query, data_view_id, test_prefix, test_pr
     destination_sds_source, source_namespace_id, destination_namespace_id
 
 
-def copyStream(stream, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, start_time, end_time, prefix=''):
+def copyType(type_id, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, prefix=''):
 
-    # Ensure type exists in new namespace
+    # Create the new type
     destination_type = source_sds_source.Types.getType(
-        namespace_id=source_namespace_id, type_id=stream.TypeId)
-    destination_type.Id = f'{prefix}{stream.TypeId}'  # optional
+        namespace_id=source_namespace_id, type_id=type_id)
+    destination_type.Id = f'{prefix}{destination_type.Id}'  # optional
     destination_sds_source.Types.getOrCreateType(
         namespace_id=destination_namespace_id, type=destination_type)
+
+
+def copyStream(stream, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, start_time, end_time, prefix=''):
 
     # Create the new stream
     source_stream_id = stream.Id
     stream.Id = f'{prefix}{stream.Id}'  # optional
-    stream.TypeId = destination_type.Id
+    stream.TypeId = f'{prefix}{stream.TypeId}'  # optional
     destination_sds_source.Streams.getOrCreateStream(
         namespace_id=destination_namespace_id, stream=stream)
 
@@ -64,6 +67,17 @@ def copyAsset(asset, source_sds_source, source_namespace_id, destination_sds_sou
     asset.Id = f'{prefix}{asset.Id}'  # optional
     destination_sds_source.Assets.createOrUpdateAsset(
         namespace_id=destination_namespace_id, asset=asset)
+
+
+def removeDuplicates(list):
+    id_set = set()
+    reduced_list = []
+    for item in list:
+        if item.Id not in id_set:
+            reduced_list.append(item)
+            id_set.add(item.Id)
+
+    return reduced_list
 
 
 def main(test=False):
@@ -112,12 +126,7 @@ def main(test=False):
                 namespace_id=source_namespace_id, query=asset_query, skip=0, count=max_asset_count)
 
         # Remove duplicate assets
-        asset_id_set = set()
-        reduced_assets = []
-        for asset in assets:
-            if asset.Id not in asset_id_set:
-                reduced_assets.append(asset)
-                asset_id_set.add(asset.Id)
+        reduced_assets = removeDuplicates(assets)
 
         # Copy over referenced streams
         for asset in assets:
@@ -136,14 +145,22 @@ def main(test=False):
                 namespace_id=source_namespace_id, query=stream_query, skip=0, count=max_stream_count)
 
         # Remove duplicate streams
-        stream_id_set = set()
-        reduced_streams = []
-        for stream in streams:
-            if stream.Id not in stream_id_set:
-                reduced_streams.append(stream)
-                stream_id_set.add(stream.Id)
+        reduced_streams = removeDuplicates(streams)
 
-        # For each stream found, copy over the type, create the new stream, and copy the values
+        # Get a list of all unique types to create
+        types_id_set = set()
+
+        for stream in reduced_streams:
+            if stream.TypeId not in types_id_set:
+                types_id_set.add(stream.TypeId)
+
+        # Copy each unique type found
+        with ThreadPoolExecutor() as pool:
+            for type_id in types_id_set:
+                pool.submit(copyType, type_id, source_sds_source, source_namespace_id,
+                            destination_sds_source, destination_namespace_id, prefix)
+
+        # For each stream found create the new stream and copy the values
         with ThreadPoolExecutor() as pool:
             for stream in reduced_streams:
                 pool.submit(copyStream, stream, source_sds_source, source_namespace_id,
