@@ -1,11 +1,10 @@
 import unittest
 import configparser
+import config
 
 from ocs_sample_library_preview import DataItemResourceType, SdsResultPage, OCSClient
 from concurrent.futures import ThreadPoolExecutor
 from program import main
-
-from config import test_prefix, test_prefix, max_stream_count, max_asset_count, destination_sds_source, destination_namespace_id
 
 
 class SDSPythonSampleTests(unittest.TestCase):
