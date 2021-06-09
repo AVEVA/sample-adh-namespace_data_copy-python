@@ -84,27 +84,27 @@ def main(test=False):
     assets = []  # The list of assets to be sent
 
     if test:
-        prefix = test_prefix
+        prefix = config.test_prefix
 
     try:
         # Step 1: Copy data view
 
-        if data_view_id != None:
+        if config.data_view_id != None:
             # Find the data view with the specified Id
-            data_view = source_sds_source.DataViews.getDataView(
-                namespace_id=source_namespace_id, data_view_id=data_view_id)
+            data_view = config.source_sds_source.DataViews.getDataView(
+                namespace_id=config.source_namespace_id, data_view_id=config.data_view_id)
 
             # Copy all assets or streams that are referenced by the data view
             for query in data_view.Queries:
 
                 if query.Kind == DataItemResourceType.Stream:
-                    new_streams = source_sds_source.Streams.getStreams(
-                        namespace_id=source_namespace_id, query=query.Value, skip=0, count=max_stream_count)
+                    new_streams = config.source_sds_source.Streams.getStreams(
+                        namespace_id=config.source_namespace_id, query=query.Value, skip=0, count=config.max_stream_count)
                     streams = streams + new_streams
 
                 elif query.Kind == DataItemResourceType.Assets:
-                    new_assets = source_sds_source.Assets.getAssets(
-                        namespace_id=source_namespace_id, query=query.Value, skip=0, count=max_asset_count)
+                    new_assets = config.source_sds_source.Assets.getAssets(
+                        namespace_id=config.source_namespace_id, query=query.Value, skip=0, count=config.max_asset_count)
                     assets = assets + new_assets
 
                 else:
@@ -112,15 +112,15 @@ def main(test=False):
 
             # Create the data view
             data_view.Id = f'{prefix}{data_view.Id}'  # optional
-            destination_sds_source.DataViews.putDataView(
-                namespace_id=destination_namespace_id, data_view=data_view)
+            config.destination_sds_source.DataViews.putDataView(
+                namespace_id=config.destination_namespace_id, data_view=data_view)
 
         # Step 2: Retrieve streams referenced in assets
 
-        if asset_query != None:
+        if config.asset_query != None:
             # Find all assets via a query (repeat script if multiple searches are necessary)
-            assets = assets + source_sds_source.Assets.getAssets(
-                namespace_id=source_namespace_id, query=asset_query, skip=0, count=max_asset_count)
+            assets = assets + config.source_sds_source.Assets.getAssets(
+                namespace_id=config.source_namespace_id, query=config.asset_query, skip=0, count=config.max_asset_count)
 
         # Remove duplicate assets
         reduced_assets = removeDuplicates(assets)
@@ -128,18 +128,18 @@ def main(test=False):
         # Copy over referenced streams
         for asset in assets:
             for stream_reference in asset.StreamReferences:
-                stream = source_sds_source.Streams.getStream(
-                    namespace_id=source_namespace_id, stream_id=stream_reference.StreamId)
+                stream = config.source_sds_source.Streams.getStream(
+                    namespace_id=config.source_namespace_id, stream_id=stream_reference.StreamId)
                 # optional
                 stream_reference.StreamId = f'{prefix}{stream_reference.StreamId}'
                 streams.append(stream)
 
         # Step 3: Copy streams
 
-        if stream_query != None:
+        if config.stream_query != None:
             # Find all streams via a query (repeat script if multiple searches are necessary)
-            streams = streams + source_sds_source.Streams.getStreams(
-                namespace_id=source_namespace_id, query=stream_query, skip=0, count=max_stream_count)
+            streams = streams + config.source_sds_source.Streams.getStreams(
+                namespace_id=config.source_namespace_id, query=config.stream_query, skip=0, count=config.max_stream_count)
 
         # Remove duplicate streams
         reduced_streams = removeDuplicates(streams)
@@ -154,21 +154,21 @@ def main(test=False):
         # Copy each unique type found
         with ThreadPoolExecutor() as pool:
             for type_id in types_id_set:
-                pool.submit(copyType, type_id, source_sds_source, source_namespace_id,
-                            destination_sds_source, destination_namespace_id, prefix)
+                pool.submit(copyType, type_id, config.source_sds_source, config.source_namespace_id,
+                            config.destination_sds_source, config.destination_namespace_id, prefix)
 
         # For each stream found create the new stream and copy the values
         with ThreadPoolExecutor() as pool:
             for stream in reduced_streams:
-                pool.submit(copyStream, stream, source_sds_source, source_namespace_id,
-                            destination_sds_source, destination_namespace_id, start_time, end_time, prefix)
+                pool.submit(copyStream, stream, config.source_sds_source, config.source_namespace_id,
+                            config.destination_sds_source, config.destination_namespace_id, config.start_time, config.end_time, prefix)
 
         # Step 4: Copy assets
 
         with ThreadPoolExecutor() as pool:
             for asset in reduced_assets:
-                pool.submit(copyAsset, asset, source_sds_source, source_namespace_id,
-                            destination_sds_source, destination_namespace_id, prefix)
+                pool.submit(copyAsset, asset, config.source_sds_source, config.source_namespace_id,
+                            config.destination_sds_source, config.destination_namespace_id, prefix)
 
     except Exception as ex:
         print((f"Encountered Error: {ex}"))
