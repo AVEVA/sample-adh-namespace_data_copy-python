@@ -4,10 +4,7 @@ import threading
 import traceback
 import configparser
 import json
-
-from config import stream_query, asset_query, data_view_id, test_prefix, test_prefix, \
-    max_stream_count, max_asset_count, start_time, end_time, source_sds_source, \
-    destination_sds_source, source_namespace_id, destination_namespace_id
+import config
 
 
 def copyType(type_id, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, prefix=''):
