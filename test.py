@@ -35,11 +35,10 @@ def cleanup():
     assets = config.destination_sds_source.Assets.getAssets(
         namespace_id=config.destination_namespace_id, query=asset_query, skip=0, count=config.max_asset_count)
     asset_type_ids = set()
-    with ThreadPoolExecutor() as pool:
-        for asset in assets:
-            asset_type_ids.add(asset.AssetTypeId)
-            pool.submit(config.destination_sds_source.Assets.deleteAsset,
-                        namespace_id=config.destination_namespace_id, asset_id=asset.Id)
+    for asset in assets:
+        asset_type_ids.add(asset.AssetTypeId)
+        config.destination_sds_source.Assets.deleteAsset(
+            namespace_id=config.destination_namespace_id, asset_id=asset.Id)
 
     # Delete all asset types used by created assets
     for asset_type_id in asset_type_ids:
@@ -59,11 +58,10 @@ def cleanup():
     streams = config.destination_sds_source.Streams.getStreams(
         namespace_id=config.destination_namespace_id, query=stream_query, skip=0, count=config.max_stream_count)
     type_ids = set()
-    with ThreadPoolExecutor() as pool:
-        for stream in streams:
-            type_ids.add(stream.TypeId)
-            pool.submit(config.destination_sds_source.Streams.deleteStream,
-                        namespace_id=config.destination_namespace_id, stream_id=stream.Id)
+    for stream in streams:
+        type_ids.add(stream.TypeId)
+        config.destination_sds_source.Streams.deleteStream(
+            namespace_id=config.destination_namespace_id, stream_id=stream.Id)
 
     # Find all types associated with the created streams and delete them
     for type_id in type_ids:

@@ -7,7 +7,7 @@ import json
 import config
 
 
-def copyType(type_id, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, prefix=''):
+def copyTypeByTypeId(type_id, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, prefix=''):
 
     # Create the new type
     destination_type = source_sds_source.Types.getType(
@@ -71,15 +71,13 @@ def removeDuplicates(list):
     reduced_list = []
     for item in list:
         if item.Id not in id_set:
-            reduced_list.append(item)
+            reduced_list += item
             id_set.add(item.Id)
 
     return reduced_list
 
 
 def main(test=False):
-    global streams, assets
-
     streams = []  # The list of streams to be sent
     assets = []  # The list of assets to be sent
 
@@ -100,12 +98,12 @@ def main(test=False):
                 if query.Kind == DataItemResourceType.Stream:
                     new_streams = config.source_sds_source.Streams.getStreams(
                         namespace_id=config.source_namespace_id, query=query.Value, skip=0, count=config.max_stream_count)
-                    streams = streams + new_streams
+                    streams += new_streams
 
                 elif query.Kind == DataItemResourceType.Assets:
                     new_assets = config.source_sds_source.Assets.getAssets(
                         namespace_id=config.source_namespace_id, query=query.Value, skip=0, count=config.max_asset_count)
-                    assets = assets + new_assets
+                    assets += new_assets
 
                 else:
                     raise ValueError
@@ -119,11 +117,11 @@ def main(test=False):
 
         if config.asset_query != None:
             # Find all assets via a query (repeat script if multiple searches are necessary)
-            assets = assets + config.source_sds_source.Assets.getAssets(
+            assets += config.source_sds_source.Assets.getAssets(
                 namespace_id=config.source_namespace_id, query=config.asset_query, skip=0, count=config.max_asset_count)
 
         # Remove duplicate assets
-        reduced_assets = removeDuplicates(assets)
+        assets = removeDuplicates(assets)
 
         # Copy over referenced streams
         for asset in assets:
@@ -132,41 +130,42 @@ def main(test=False):
                     namespace_id=config.source_namespace_id, stream_id=stream_reference.StreamId)
                 # optional
                 stream_reference.StreamId = f'{prefix}{stream_reference.StreamId}'
-                streams.append(stream)
+                streams += stream
 
         # Step 3: Copy streams
 
         if config.stream_query != None:
             # Find all streams via a query (repeat script if multiple searches are necessary)
-            streams = streams + config.source_sds_source.Streams.getStreams(
+            streams += config.source_sds_source.Streams.getStreams(
                 namespace_id=config.source_namespace_id, query=config.stream_query, skip=0, count=config.max_stream_count)
 
         # Remove duplicate streams
-        reduced_streams = removeDuplicates(streams)
+        streams = removeDuplicates(streams)
 
         # Get a list of all unique types to create
         types_id_set = set()
 
-        for stream in reduced_streams:
+        for stream in streams:
+
             if stream.TypeId not in types_id_set:
                 types_id_set.add(stream.TypeId)
 
         # Copy each unique type found
         with ThreadPoolExecutor() as pool:
             for type_id in types_id_set:
-                pool.submit(copyType, type_id, config.source_sds_source, config.source_namespace_id,
+                pool.submit(copyTypeByTypeId, type_id, config.source_sds_source, config.source_namespace_id,
                             config.destination_sds_source, config.destination_namespace_id, prefix)
 
         # For each stream found create the new stream and copy the values
         with ThreadPoolExecutor() as pool:
-            for stream in reduced_streams:
+            for stream in streams:
                 pool.submit(copyStream, stream, config.source_sds_source, config.source_namespace_id,
                             config.destination_sds_source, config.destination_namespace_id, config.start_time, config.end_time, prefix)
 
         # Step 4: Copy assets
 
         with ThreadPoolExecutor() as pool:
-            for asset in reduced_assets:
+            for asset in assets:
                 pool.submit(copyAsset, asset, config.source_sds_source, config.source_namespace_id,
                             config.destination_sds_source, config.destination_namespace_id, prefix)
 
