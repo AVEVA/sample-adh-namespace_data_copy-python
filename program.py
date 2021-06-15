@@ -67,6 +67,7 @@ def copyAsset(asset, source_sds_source, source_namespace_id, destination_sds_sou
 
 
 def removeDuplicates(list):
+
     id_set = set()
     reduced_list = []
     for item in list:
@@ -78,6 +79,7 @@ def removeDuplicates(list):
 
 
 def main(test=False):
+
     streams = []  # The list of streams to be sent
     assets = []  # The list of assets to be sent
 
@@ -177,4 +179,5 @@ def main(test=False):
 
 
 if __name__ == '__main__':
+    
     main()
