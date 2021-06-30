@@ -12,8 +12,6 @@ max_asset_count = 150  # The maximum number of assets to copy
 start_time = '2021-05-01'  # Time window of values to transfer
 end_time = '2021-05-02'
 request_timeout = 30  # The request timeout limit
-streams = []  # The list of streams to be sent
-assets = []  # The list of assets to be sent
 
 # Read configuration
 config = configparser.ConfigParser()
