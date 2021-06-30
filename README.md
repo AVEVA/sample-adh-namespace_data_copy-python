@@ -32,25 +32,27 @@ The configurable parameters within config.py are described in the table below. I
 | Parameters       | Description |
 | ---------------- | ----------- |
 | stream_query     | The query used to find streams to copy. This can be set to '*' to copy all streams or None to copy no streams (besides the underlying streams of any queried assets or the specified data view). Please refer to [docs.osisoft.com](https://docs.osisoft.com/bundle/ocs/page/api-reference/sequential-data-store/sds-search.html) for more information on searching for streams. |
-| asset_query      | The query used to find assets to copy. This can be set to '*' to copy all assetss or None to copy no assets (besides the underlying assets of the specified data view). Please refer to [docs.osisoft.com](https://docs.osisoft.com/bundle/ocs/page/api-reference/assets/asset-search-api.html) for more information on searching for assets. |
+| asset_query      | The query used to find assets to copy. This can be set to '*' to copy all assets or None to copy no assets (besides the underlying assets of the specified data view). Please refer to [docs.osisoft.com](https://docs.osisoft.com/bundle/ocs/page/api-reference/assets/asset-search-api.html) for more information on searching for assets. |
 | data_view_id     | The id of the data view to copy. |
 | prefix           | The prefix to apply to the Ids of all streams, assets, and dataviews along with all underlying types. |
-| max_stream_count | The maximum number of streams to be returned by the stream query. |
-| max_asset_count  | The maximum number of assets to be returned by the stream query. |
+| max_stream_count | The maximum number of streams to be returned by the stream query. The maximum value is 1,000. |
+| max_asset_count  | The maximum number of assets to be returned by the stream query. The maximum value is 1,000. |
 | start_time       | The start time of the data window to be transfered. |
 | end_time         | The end time of the data window to be transfered. |
 | request_timeout  | The time before a request time-out. If requests are timing-out try increasing this value. |
 
 #### Copying all streams
 
-1. Set stream_query to '*'
+1. Set max_stream_count to 1,000 (if more than 1,000 streams are being copied, the copying will need to be done in batches)
+1. Set stream_query to '*' (if copying in batches, this query will need to be modified)
 1. Set asset_query to None
 1. Set data_view_id to None
 
 #### Copying all assets and all underlying streams
 
+1. Set max_asset_count to 1,000 (if more than 1,000 assets are being copied, the copying will need to be done in batches)
 1. Set stream_query to None
-1. Set asset_query to '*'
+1. Set asset_query to '*' (if copying in batches, this query will need to be modified)
 1. Set data_view_id to None
 
 #### Copy a data view and all underlying assets and streams
