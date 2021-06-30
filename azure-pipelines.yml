@@ -31,7 +31,7 @@ variables:
   - name: CredFileLibrary
     value: product-readiness.namespace_migration_python.ini
   - name: analysisProject
-    value: Namespace_Migration_Python
+    value: Namespace_Data_Copy_Python
 
 jobs:
   - job: Tests
