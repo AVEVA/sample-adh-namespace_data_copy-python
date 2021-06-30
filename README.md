@@ -1,4 +1,4 @@
-# OSIsoft Cloud Services Namespace Migration Python Sample
+# OSIsoft Cloud Services Namespace Data Copy Python Sample
 
 **Version:** 1.0.0
 
