@@ -72,7 +72,7 @@ def removeDuplicates(list):
     reduced_list = []
     for item in list:
         if item.Id not in id_set:
-            reduced_list += item
+            reduced_list.append(item)
             id_set.add(item.Id)
 
     return reduced_list
@@ -85,6 +85,8 @@ def main(test=False):
 
     if test:
         prefix = config.test_prefix
+    else:
+        prefix = config.prefix
 
     try:
         # Step 1: Copy data view
@@ -132,7 +134,7 @@ def main(test=False):
                     namespace_id=config.source_namespace_id, stream_id=stream_reference.StreamId)
                 # optional
                 stream_reference.StreamId = f'{prefix}{stream_reference.StreamId}'
-                streams += stream
+                streams.append(stream)
 
         # Step 3: Copy streams
 
