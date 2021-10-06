@@ -1,6 +1,6 @@
 # OSIsoft Cloud Services Namespace Data Copy Python Sample
 
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 [![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/OCS/osisoft.sample-ocs-namespace_data_copy-python?repoName=osisoft%2Fsample-ocs-namespace_data_copy-python&branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3856&repoName=osisoft%2Fsample-ocs-namespace_data_copy-python&branchName=main)
 
@@ -24,11 +24,11 @@ This sample uses REST API calls to copy data views, assets, and streams from a s
 
 ## Configuring the sample
 
-The sample is configured by modifying the files [config.py](config.py) and [config.placeholder.ini](config.placeholder.ini). Details on how to configure them can be found in the sections below. Before editing config.placeholder.ini, rename this file to `config.ini`. This repository's `.gitignore` rules should prevent the file from ever being checked in to any fork or branch, to ensure credentials are not compromised.
+The sample is configured by modifying the files [appsettings.py](appsettings.py) and [appsettings.placeholder.json](appsettings.placeholder.json). Details on how to configure them can be found in the sections below. Before editing appsettings.placeholder.json, rename this file to `appsettings.json`. This repository's `.gitignore` rules should prevent the file from ever being checked in to any fork or branch, to ensure credentials are not compromised.
 
-### Configuring config.py
+### Configuring appsettings.py
 
-The configurable parameters within config.py are described in the table below. In addition, the common use cases for this sample and how to configure parameters are described in the following subsections.
+The configurable parameters within appsettings.py are described in the table below. In addition, the common use cases for this sample and how to configure parameters are described in the following subsections.
 
 | Parameters       | Description                                                                                                                                                                                                                                                                                                                                                                       |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -62,9 +62,9 @@ The configurable parameters within config.py are described in the table below. I
 1. Set asset_query to None
 1. Set data_view_id to the desire data_view_id
 
-### Configuring config.ini
+### Configuring appsettings.json
 
-OSIsoft Cloud Services is secured by obtaining tokens from its identity endpoint. Client credentials clients provide a client application identifier and an associated secret (or key) that are authenticated against the token endpoint. You must replace the placeholders in your `config.ini` file with the authentication-related values from your tenant and a client-credentials client created in your OCS tenant. There are separate configurations for both the source and destination namespaces; however, there can be overlap in some settings such as TenantId, ClientId, ClientSecret, and even NamespaceId if, for example, you want to migrate to a namespace in the same tenant.
+OSIsoft Cloud Services is secured by obtaining tokens from its identity endpoint. Client credentials clients provide a client application identifier and an associated secret (or key) that are authenticated against the token endpoint. You must replace the placeholders in your `appsettings.json` file with the authentication-related values from your tenant and a client-credentials client created in your OCS tenant. There are separate configurations for both the source and destination namespaces; however, there can be overlap in some settings such as TenantId, ClientId, ClientSecret, and even NamespaceId if, for example, you want to migrate to a namespace in the same tenant.
 
 ```ini
 [SourceConfiguration]
@@ -86,7 +86,7 @@ ApiVersion = v1
 
 ## Running the sample
 
-To run this example from the command line once the `config.ini` is configured, run
+To run this example from the command line once the `appsettings.json` is configured, run
 
 ```shell
 python program.py
