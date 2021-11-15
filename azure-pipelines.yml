@@ -26,10 +26,6 @@ resources:
 
 variables:
   - template: '/miscellaneous/build_templates/variables.yml@templates'
-  - name: CredFile
-    value: config.ini
-  - name: CredFileLibrary
-    value: product-readiness.namespace_migration_python.ini
   - name: analysisProject
     value: Namespace_Data_Copy_Python
 
@@ -45,11 +41,27 @@ jobs:
     pool:
       name: 00-OSIManaged-Containers
       demands: Agent.OS -equals $(agentOS)
+    variables:
+      - name: SourceConfiguration.TenantId
+        value: $(TenantId)
+      - name: SourceConfiguration.NamespaceId
+        value: $(NamespaceId)
+      - name: SourceConfiguration.ClientId
+        value: $(ClientId)
+      - name: SourceConfiguration.ClientSecret
+        value: $(ClientSecret)
+      - name: DestinationConfiguration.TenantId
+        value: $(TenantId)
+      - name: DestinationConfiguration.NamespaceId
+        value: $(NamespaceId)
+      - name: DestinationConfiguration.ClientId
+        value: $(ClientId)
+      - name: DestinationConfiguration.ClientSecret
+        value: $(ClientSecret)
     steps:
-      - template: '/miscellaneous/build_templates/config.yml@templates'
+      - template: '/miscellaneous/build_templates/appsettings.yml@templates'
         parameters:
-          fileOriginal: $(CredFile)
-          fileLibrary: $(CredFileLibrary)
+          secrets: 'TenantId, NamespaceId, ClientId, ClientSecret'
 
       - script: |
           echo Install test tools  
