@@ -1,6 +1,6 @@
 # OSIsoft Cloud Services Namespace Data Copy Python Sample
 
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 [![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/OCS/osisoft.sample-ocs-namespace_data_copy-python?repoName=osisoft%2Fsample-ocs-namespace_data_copy-python&branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3856&repoName=osisoft%2Fsample-ocs-namespace_data_copy-python&branchName=main)
 
