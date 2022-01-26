@@ -1,15 +1,18 @@
-# OSIsoft Cloud Services Namespace Data Copy Python Sample
+# AVEVA Data Hub Namespace Data Copy Python Sample
 
-**Version:** 1.0.6
+| :loudspeaker: **Notice**: Samples have been updated to reflect that they work on AVEVA Data Hub. The samples also work on OSIsoft Cloud Services unless otherwise noted. |
+| -----------------------------------------------------------------------------------------------|  
 
-[![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/OCS/osisoft.sample-ocs-namespace_data_copy-python?repoName=osisoft%2Fsample-ocs-namespace_data_copy-python&branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3856&repoName=osisoft%2Fsample-ocs-namespace_data_copy-python&branchName=main)
+**Version:** 1.1.0
+
+[![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/ADH/aveva.sample-adh-namespace_data_copy-python?branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3856&branchName=main)
 
 Developed against Python 3.9.1.
 
 ## Requirements
 
-- Python 3.9+
-- Register a [Client-Credentials Client](https://cloud.osisoft.com/clients) in your OSIsoft Cloud Services tenant and create a client secret to use in the configuration of this sample. ([Video Walkthrough](https://www.youtube.com/watch?v=JPWy0ZX9niU))
+- Python 3.7+
+- Register a [Client-Credentials Client](https://datahub.connect.aveva.com/clients) in your AVEVA Data Hub tenant and create a client secret to use in the configuration of this sample. ([Video Walkthrough](https://www.youtube.com/watch?v=JPWy0ZX9niU))
 - Install required modules: `pip install -r requirements.txt`
 
 ## About this sample
@@ -64,7 +67,7 @@ The configurable parameters within appsettings.py are described in the table bel
 
 ### Configuring appsettings.json
 
-OSIsoft Cloud Services is secured by obtaining tokens from its identity endpoint. Client credentials clients provide a client application identifier and an associated secret (or key) that are authenticated against the token endpoint. You must replace the placeholders in your `appsettings.json` file with the authentication-related values from your tenant and a client-credentials client created in your OCS tenant. There are separate configurations for both the source and destination namespaces; however, there can be overlap in some settings such as TenantId, ClientId, ClientSecret, and even NamespaceId if, for example, you want to migrate to a namespace in the same tenant.
+AVEVA Data Hub is secured by obtaining tokens from its identity endpoint. Client credentials clients provide a client application identifier and an associated secret (or key) that are authenticated against the token endpoint. You must replace the placeholders in your `appsettings.json` file with the authentication-related values from your tenant and a client-credentials client created in your ADH tenant. There are separate configurations for both the source and destination namespaces; however, there can be overlap in some settings such as TenantId, ClientId, ClientSecret, and even NamespaceId if, for example, you want to migrate to a namespace in the same tenant.
 
 ```ini
 [SourceConfiguration]
@@ -72,7 +75,7 @@ NamespaceId = REPLACE_WITH_CURRENT_NAMESPACE_ID
 TenantId = REPLACE_WITH_CURRENT_TENANT_ID
 ClientId = REPLACE_WITH_CURRENT_CLIENT_ID
 ClientSecret = REPLACE_WITH_CURRENT_CLIENT_SECRET
-Resource = https://dat-b.osisoft.com
+Resource = https://uswe.datahub.connect.aveva.com
 ApiVersion = v1
 
 [DestinationConfiguration]
@@ -80,7 +83,7 @@ NamespaceId = REPLACE_WITH_NEW_NAMESPACE_ID
 TenantId = REPLACE_WITH_NEW_TENANT_ID
 ClientId = REPLACE_WITH_NEW_CLIENT_ID
 ClientSecret = REPLACE_WITH_NEW_CLIENT_SECRET
-Resource = https://dat-b.osisoft.com
+Resource = https://uswe.datahub.connect.aveva.com
 ApiVersion = v1
 ```
 
@@ -107,5 +110,5 @@ python -m pytest test.py
 
 Tested against Python 3.9.1
 
-For the main OCS samples page [ReadMe](https://github.com/osisoft/OSI-Samples-OCS)  
-For the main OSIsoft samples page [ReadMe](https://github.com/osisoft/OSI-Samples)
+For the main ADH samples page [ReadMe](https://github.com/osisoft/OSI-Samples-OCS)  
+For the main AVEVA samples page [ReadMe](https://github.com/osisoft/OSI-Samples)
