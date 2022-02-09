@@ -54,6 +54,8 @@ jobs:
         value: $(ClientId)
       - name: SourceConfiguration.ClientSecret
         value: $(ClientSecret)
+      - name: SourceConfiguration.Resource
+        value: $(Resource)
       - name: DestinationConfiguration.TenantId
         value: $(TenantId)
       - name: DestinationConfiguration.NamespaceId
@@ -62,10 +64,12 @@ jobs:
         value: $(ClientId)
       - name: DestinationConfiguration.ClientSecret
         value: $(ClientSecret)
+      - name: DestinationConfiguration.Resource
+        value: $(Resource)
     steps:
       - template: '/miscellaneous/build_templates/appsettings.yml@templates'
         parameters:
-          secrets: 'TenantId, NamespaceId, ClientId, ClientSecret'
+          secrets: 'TenantId, NamespaceId, ClientId, ClientSecret, Resource'
 
       - script: |
           echo Install test tools  

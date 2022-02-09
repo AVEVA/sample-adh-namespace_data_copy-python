@@ -1,4 +1,4 @@
-from ocs_sample_library_preview import DataItemResourceType, SdsResultPage, OCSClient
+from ocs_sample_library_preview import DataItemResourceType, SdsResultPage, ADHClient
 from concurrent.futures import ThreadPoolExecutor
 import traceback
 import json

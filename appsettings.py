@@ -1,4 +1,4 @@
-from ocs_sample_library_preview import OCSClient
+from ocs_sample_library_preview import ADHClient
 import json
 
 # Settings
@@ -25,14 +25,14 @@ except Exception as error:
     print(f'Could not open/read appsettings.json')
     exit()
 
-source_sds_source = OCSClient(appsettings.get('SourceConfiguration').get('ApiVersion'),
+source_sds_source = ADHClient(appsettings.get('SourceConfiguration').get('ApiVersion'),
                               appsettings.get('SourceConfiguration').get('TenantId'),
                               appsettings.get('SourceConfiguration').get('Resource'),
                               appsettings.get('SourceConfiguration').get('ClientId'),
                               appsettings.get('SourceConfiguration').get('ClientSecret'))
 source_sds_source.request_timeout = request_timeout
 
-destination_sds_source = OCSClient(appsettings.get('DestinationConfiguration').get('ApiVersion'),
+destination_sds_source = ADHClient(appsettings.get('DestinationConfiguration').get('ApiVersion'),
                                    appsettings.get('DestinationConfiguration').get('TenantId'),
                                    appsettings.get('DestinationConfiguration').get('Resource'),
                                    appsettings.get('DestinationConfiguration').get('ClientId'),
