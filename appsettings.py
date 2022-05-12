@@ -1,4 +1,4 @@
-from ocs_sample_library_preview import ADHClient
+from adh_sample_library_preview import ADHClient
 import json
 
 # Settings

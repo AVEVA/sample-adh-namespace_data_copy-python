@@ -1,7 +1,7 @@
 import unittest
 import appsettings
 
-from ocs_sample_library_preview import DataItemResourceType, SdsResultPage, ADHClient
+from adh_sample_library_preview import DataItemResourceType, SdsResultPage, ADHClient
 from concurrent.futures import ThreadPoolExecutor
 from program import main
 
