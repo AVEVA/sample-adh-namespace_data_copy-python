@@ -1,6 +1,6 @@
 # AVEVA Data Hub Namespace Data Copy Python Sample
 
-**Version:** 1.1.5
+**Version:** 1.1.6
 
 [![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/ADH/aveva.sample-adh-namespace_data_copy-python?branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3856&branchName=main)
 
