@@ -45,20 +45,21 @@ def copyAsset(asset, source_sds_source, source_namespace_id, destination_sds_sou
 
     # Ensure type exists in new namespace
     if asset.AssetTypeId != None:
-        destination_asset_type = source_sds_source.Assets.getAssetTypeById(
+        destination_asset_type = source_sds_source.AssetTypes.getAssetTypeById(
             namespace_id=source_namespace_id, asset_type_id=asset.AssetTypeId)
 
         destination_asset_type.Id = f'{prefix}{asset.AssetTypeId}'  # optional
+        if destination_asset_type.TypeReferences != None:
+            for type_reference in destination_asset_type.TypeReferences:
+                # optional
+                type_reference.TypeId = f'{prefix}{type_reference.TypeId}'
 
-        for type_reference in destination_asset_type.TypeReferences:
-            # optional
-            type_reference.TypeId = f'{prefix}{type_reference.TypeId}'
-
-        destination_sds_source.Assets.createOrUpdateAssetType(
+        destination_sds_source.AssetTypes.createOrUpdateAssetType(
             namespace_id=destination_namespace_id, asset_type=destination_asset_type)
         asset.AssetTypeId = destination_asset_type.Id
-
+    
     # Create the new asset
+
     asset.Id = f'{prefix}{asset.Id}'  # optional
     destination_sds_source.Assets.createOrUpdateAsset(
         namespace_id=destination_namespace_id, asset=asset)
@@ -127,12 +128,13 @@ def main(test=False):
 
         # Copy over referenced streams
         for asset in assets:
-            for stream_reference in asset.StreamReferences:
-                stream = appsettings.source_sds_source.Streams.getStream(
-                    namespace_id=appsettings.source_namespace_id, stream_id=stream_reference.StreamId)
-                # optional
-                stream_reference.StreamId = f'{prefix}{stream_reference.StreamId}'
-                streams.append(stream)
+            if str(asset.StreamReferences) != 'None':
+                for stream_reference in asset.StreamReferences:
+                    stream = appsettings.source_sds_source.Streams.getStream(
+                        namespace_id=appsettings.source_namespace_id, stream_id=stream_reference.StreamId)
+                    # optional
+                    stream_reference.StreamId = f'{prefix}{stream_reference.StreamId}'
+                    #streams.append(stream)
 
         # Step 3: Copy streams
 
