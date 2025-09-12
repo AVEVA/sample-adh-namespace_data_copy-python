@@ -1,5 +1,9 @@
 # Version History
 
+## 1.1.7 / 2023-10-13
+
+- Fix bugs in copyasset
+
 ## 1.1.6 / 2023-10-13
 
 - Migrate Pipelines
