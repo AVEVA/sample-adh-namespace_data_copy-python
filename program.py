@@ -134,7 +134,7 @@ def main(test=False):
                         namespace_id=appsettings.source_namespace_id, stream_id=stream_reference.StreamId)
                     # optional
                     stream_reference.StreamId = f'{prefix}{stream_reference.StreamId}'
-                    #streams.append(stream)
+                    streams.append(stream)
 
         # Step 3: Copy streams
 
