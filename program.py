@@ -1,7 +1,11 @@
-from adh_sample_library_preview import DataItemResourceType, SdsResultPage, ADHClient
+import gzip
+
+from adh_sample_library_preview import DataItemResourceType, ADHClient, SdsResultPage
 from concurrent.futures import ThreadPoolExecutor
 import traceback
 import json
+
+from fastapi import requests
 import appsettings
 
 
@@ -15,7 +19,7 @@ def copyTypeByTypeId(type_id, source_sds_source, source_namespace_id, destinatio
         namespace_id=destination_namespace_id, type=destination_type)
 
 
-def copyStream(stream, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, start_time, end_time, prefix=''):
+def copyStream(stream, source_sds_source: ADHClient, source_namespace_id, destination_sds_source: ADHClient, destination_namespace_id, start_time, end_time, prefix=''):
 
     # Create the new stream
     source_stream_id = stream.Id
@@ -27,7 +31,7 @@ def copyStream(stream, source_sds_source, source_namespace_id, destination_sds_s
     # Copy the values from the current stream to the new stream
     data = source_sds_source.Streams.getWindowValuesPaged(
         namespace_id=source_namespace_id, stream_id=source_stream_id, value_class=None,
-        start=start_time, end=end_time, count=250000)
+        start=start_time, end=end_time, count=1000)
     if len(data.Results) > 0:
         destination_sds_source.Streams.updateValues(
             namespace_id=destination_namespace_id, stream_id=stream.Id, values=json.dumps(data.Results))
@@ -40,6 +44,68 @@ def copyStream(stream, source_sds_source, source_namespace_id, destination_sds_s
             destination_sds_source.Streams.updateValues(
                 namespace_id=destination_namespace_id, stream_id=stream.Id, values=json.dumps(data.Results))
 
+def prepareDataOmfMessageGzipContent(sdsData: SdsResultPage, stream_id):
+    # Step 1. construct omf data json message 
+    payload_dicts = []
+    payload_dicts.append({
+        "ContainerId": stream_id,
+        "Values": sdsData.Results
+    })
+
+    # Step 2. serialize json and gzip compress the result
+    json_bytes = json.dumps(payload_dicts).encode("utf-8")
+    return gzip.compress(json_bytes)
+
+def getDataOmfMessageHeaders():
+    return {
+        "MessageType": "Data",
+        "Action": "Create",
+        "MessageFormat": "Json",
+        "omfversion": "1.2",
+        "compression": "gzip",
+    }
+
+def copyStreamOmf(stream, source_sds_source: ADHClient, source_namespace_id, destination_sds_source: ADHClient, destination_namespace_id, start_time, end_time, prefix=''):
+    # Create the new stream
+    source_stream_id = stream.Id
+    stream.Id = f'{prefix}{stream.Id}'  # optional
+    stream.TypeId = f'{prefix}{stream.TypeId}'  # optional
+    destination_sds_source.Streams.getOrCreateStream(
+        namespace_id=destination_namespace_id, stream=stream)
+    
+    # Construct omf endpoint
+    omf_endpoint = f'{destination_sds_source.uri}/api/v1/Tenants/{destination_sds_source.tenant}/Namespaces/{destination_namespace_id}/omf'
+
+    # Copy the values from the current stream to the new stream, using omf message to send data to destination
+    events_per_chunk = 10_000
+    data = source_sds_source.Streams.getWindowValuesPaged(
+        namespace_id=source_namespace_id, stream_id=source_stream_id, value_class=None,
+        start=start_time, end=end_time, count=events_per_chunk)
+    if len(data.Results) > 0:
+        # Use base client to call omf endpoint
+        response = destination_sds_source.baseClient.request(
+            method="post", 
+            url=omf_endpoint, 
+            params=None, 
+            data=prepareDataOmfMessageGzipContent(data, stream.Id), 
+            headers=None, 
+            additional_headers=getDataOmfMessageHeaders())
+    
+    while not data.end():
+        data = source_sds_source.Streams.getWindowValuesPaged(
+            namespace_id=source_namespace_id, stream_id=source_stream_id, value_class=None,
+            start=start_time, end=end_time, count=events_per_chunk, continuation_token=data.ContinuationToken)
+        if len(data.Results) > 0:
+            # Use base client to call omf endpoint
+            response = destination_sds_source.baseClient.request(
+                method="post", 
+                url=omf_endpoint, 
+                params=None, 
+                data=prepareDataOmfMessageGzipContent(data, stream.Id), 
+                headers=None, 
+                additional_headers=getDataOmfMessageHeaders()
+            )
+        
 
 def copyAsset(asset, source_sds_source, source_namespace_id, destination_sds_source, destination_namespace_id, prefix=''):
 
@@ -137,7 +203,7 @@ def main(test=False):
                     streams.append(stream)
 
         # Step 3: Copy streams
-
+        
         if appsettings.stream_query != None:
             # Find all streams via a query (repeat script if multiple searches are necessary)
             streams += appsettings.source_sds_source.Streams.getStreams(
@@ -161,9 +227,10 @@ def main(test=False):
                             appsettings.destination_sds_source, appsettings.destination_namespace_id, prefix)
 
         # For each stream found create the new stream and copy the values
-        with ThreadPoolExecutor() as pool:
+        # Set max workers to limit concurrency to a certain number streams to migrate at a time
+        with ThreadPoolExecutor(max_workers=8) as pool:
             for stream in streams:
-                pool.submit(copyStream, stream, appsettings.source_sds_source, appsettings.source_namespace_id,
+                pool.submit(copyStreamOmf, stream, appsettings.source_sds_source, appsettings.source_namespace_id,
                             appsettings.destination_sds_source, appsettings.destination_namespace_id, appsettings.start_time, appsettings.end_time, prefix)
 
         # Step 4: Copy assets

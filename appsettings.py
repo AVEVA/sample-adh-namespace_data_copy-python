@@ -2,15 +2,15 @@ from adh_sample_library_preview import ADHClient
 import json
 
 # Settings
-stream_query = '"SLTCSensorUnit1"'
-asset_query = '"SLTC Sensor1"'
-data_view_id = 'SLTC Sensor Unit'
+stream_query = '"3.1004.Sinusoid"'
+asset_query = None
+data_view_id = None
 prefix = ''  # prefix for streams, assets, etc.
 test_prefix = 'SAMPLE_TEST:'  # prefix for testing
 max_stream_count = 150  # The maximum number of streams to copy
 max_asset_count = 150  # The maximum number of assets to copy
 start_time = '2021-05-01'  # Time window of values to transfer
-end_time = '2021-05-02'
+end_time = '2026-05-02'
 request_timeout = 30  # The request timeout limit
 
 # Read configuration
